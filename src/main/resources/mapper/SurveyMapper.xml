@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lsurvey.example.mapper.SurveyMapper">
+	<select id="selectSurveyList" resultType="Survey">
+		SELECT s_idx as sId,
+				s_title as sTitle
+		FROM survey
+		ORDER BY sId DESC
+	</select>
+	<insert id="surveyInsert" parameterType="Survey">
+		<selectKey keyProperty="getNext" resultType="int" order="BEFORE">
+			SELECT MAX(s_idx) + 1  s_idx
+			FROM survey
+		</selectKey>
+			INSERT INTO survey (
+				s_idx,
+				s_title,
+				s_description
+			) VALUES (
+				#{getNext},
+				#{sTitle},
+				#{sDescription}
+				)
+	</insert>
+	<insert id="questionInsert" parameterType="Question">
+		<selectKey keyProperty="getNext" resultType="int" order="BEFORE">
+			SELECT MAX(q_idx) + 1  q_idx
+			FROM question
+		</selectKey>
+		INSERT INTO question (
+			s_idx,
+			q_idx,
+			q_question,
+			q_type
+		) VALUES (
+			#{sId},
+			#{getNext},
+			#{qQuestion},
+			#{qType}
+		)
+
+	</insert>
+	<insert id="itemInsert" parameterType="Item">
+		<selectKey keyProperty="getNext" resultType="int" order="BEFORE">
+			SELECT MAX(i_idx) + 1  i_idx
+			FROM item
+		</selectKey>
+		INSERT INTO item (
+			i_idx,
+			q_idx,
+			s_idx,
+			i_item
+		) VALUES (
+			#{getNext},
+			#{qId},
+			#{sId},
+			#{iItem}
+			)
+	</insert>
+	<select id="surveyView" parameterType="Survey" resultType="Survey">
+		SELECT   s_idx as sId,
+			s_title as sTitle,
+			s_description as sDescription
+		FROM survey
+		WHERE s_idx = #{sId}
+	</select>
+	<select id="selectQuestionList" resultType="Question">
+		SELECT	q_idx as qId, 
+			s_idx as sId,
+			q_question as qQuestion,
+			q_type as qType
+		FROM question
+		WHERE s_idx = #{sId}
+		ORDER BY qId ASC
+	</select>
+	<select id="selectItemList" resultType="Item">
+		SELECT 
+			s_idx as sId,
+			i_idx as iId,
+			q_idx as qId,
+			i_item as iItem
+		FROM item
+		WHERE s_idx = #{sId}
+		ORDER BY iId ASC
+	</select>
+	<insert id="saveAnswerNum">
+		INSERT INTO answernum (
+			s_idx,
+			q_idx,
+			q_type,
+			a_content
+		) VALUES <foreach collection="answernumlist" item="answernum" separator=" , "> (
+			  			#{answernum.sId}, #{answernum.qId}, #{answernum.qType}, #{answernum.aContent}
+		) </foreach>
+	</insert>
+	<insert id="saveAnswerString">
+		INSERT INTO answerstring (
+			s_idx,
+			q_idx,
+			q_type,
+			a_content
+		) VALUES <foreach collection="answerstringlist" item="answerstring" separator=" , "> (
+			  			#{answerstring.sId}, #{answerstring.qId}, #{answerstring.qType}, #{answerstring.aContent}
+		) </foreach>
+	</insert>
+	<select id="getResultNum" resultType="Result">
+	SELECT		 		a_idx AS rIdx,
+						ta.q_type AS rKind,
+						 ta.q_idx AS rQidx,
+						 q_question AS rQuestion,
+						 i_item AS rItem1,
+						 COUNT(a_content) rCount				
+	FROM			 answernum ta
+		  LEFT JOIN 	 item tb
+		  ON 			 ta.a_content = tb.i_idx
+		  LEFT JOIN 	 question tc
+		  ON 			 (ta.q_idx = tc.q_idx)
+		  WHERE 		  ta.s_idx = #{sId}
+		  GROUP BY 	     a_content
+	</select>
+	<select id="getResultString" resultType="Result">
+	SELECT		 		a_idx AS rIdx, 
+						ta.q_type AS rKind,
+						 ta.q_idx AS rQidx,
+						 q_question AS rQuestion,
+						 a_content AS rItem2			
+	FROM			 answerstring ta
+		  LEFT JOIN 	 question tb
+		  ON 			 (ta.q_idx = tb.q_idx)
+		  WHERE 		  ta.s_idx = #{sId}
+		  GROUP BY 	     a_content
+	</select>
+</mapper>
